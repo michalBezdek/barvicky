@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="authSection">
+        <h2 id="authTitle">Registrace uživatele</h2>
+        <label for="username">Uživatelské jméno:</label>
+        <input type="text" id="username" required>
+        <br>
+        <label for="password">Heslo:</label>
+        <input type="password" id="password" required>
+        <br>
+        <button id="authButton" onclick="register()">Registrovat</button>
+        <p id="authError" style="color: red; display: none;"></p>
+        <p id="authSwitch">Máte účet? <a href="#" onclick="switchToLogin()">Přihlásit se</a></p>
+    </div>
+
+    <main id="mainContent" class="color" style="display: none;">
+        <span id="hex">#9F00FF</span>
+        <button onclick="generatorBarev()">vygenerovat</button>
+        <button onclick="saveToFavorites()">Uložit do oblíbených</button>
+        <div id="favorites">
+            <h3>Oblíbené barvy:</h3>
+            <ul id="favoritesList"></ul>
+        </div>
+        <button onclick="logout()">Odhlásit se</button>
+    </main>
+
+    <script>
+        const MAX_FAVORITES = 10;
+
+        function switchToLogin() {
+            document.getElementById("authTitle").innerText = "Přihlášení uživatele";
+            document.getElementById("authButton").innerText = "Přihlásit se";
+            document.getElementById("authButton").onclick = login;
+            document.getElementById("authSwitch").innerHTML = 'Nemáte účet? <a href="#" onclick="switchToRegister()">Registrovat</a>';
+        }
+
+        function switchToRegister() {
+            document.getElementById("authTitle").innerText = "Registrace uživatele";
+            document.getElementById("authButton").innerText = "Registrovat";
+            document.getElementById("authButton").onclick = register;
+            document.getElementById("authSwitch").innerHTML = 'Máte účet? <a href="#" onclick="switchToLogin()">Přihlásit se</a>';
+        }
+
+        function register() {
+            var username = document.getElementById("username").value;
+            var password = document.getElementById("password").value;
+            var users = JSON.parse(localStorage.getItem("users")) || {};
+
+            if (users[username]) {
+                document.getElementById("authError").innerText = "Uživatelské jméno již existuje";
+                document.getElementById("authError").style.display = "block";
+            } else {
+                users[username] = password;
+                localStorage.setItem("users", JSON.stringify(users));
+                switchToLogin();
+                document.getElementById("authError").style.display = "none";
+            }
+        }
+
+        function login() {
+            var username = document.getElementById("username").value;
+            var password = document.getElementById("password").value;
+            var users = JSON.parse(localStorage.getItem("users")) || {};
+
+            if (users[username] && users[username] === password) {
+                localStorage.setItem("loggedIn", username);
+                document.getElementById("authSection").style.display = "none";
+                document.getElementById("mainContent").style.display = "block";
+                displayFavorites();
+            } else {
+                document.getElementById("authError").innerText = "Chybné uživatelské jméno nebo heslo";
+                document.getElementById("authError").style.display = "block";
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem("loggedIn");
+            document.getElementById("authSection").style.display = "block";
+            document.getElementById("mainContent").style.display = "none";
+        }
+
+        function checkLoginStatus() {
+            if (localStorage.getItem("loggedIn")) {
+                document.getElementById("authSection").style.display = "none";
+                document.getElementById("mainContent").style.display = "block";
+                displayFavorites();
+            } else {
+                document.getElementById("authSection").style.display = "block";
+                document.getElementById("mainContent").style.display = "none";
+            }
+        }
+
+        function adjustButtonContrastColor(hexColor) {
+            var r = parseInt(hexColor.substr(1, 2), 16);
+            var g = parseInt(hexColor.substr(3, 2), 16);
+            var b = parseInt(hexColor.substr(5, 2), 16);
+            var brightness = (r * 299 + g * 587 + b * 114) / 1000;
+            return brightness > 125 ? '#000000' : '#ffffff';
+        }
+
+        function adjustMainTextContrastColor(hexColor) {
+            var r = parseInt(hexColor.substr(1, 2), 16);
+            var g = parseInt(hexColor.substr(3, 2), 16);
+            var b = parseInt(hexColor.substr(5, 2), 16);
+            var brightness = (r * 299 + g * 587 + b * 114) / 1000;
+            return brightness > 125 ? '#ffffff' : '#000000';
+        }
+
+        function generatorBarev() {
+            var symbols = "0123456789ABCDEF";
+            var color = "#";
+            for (var i = 0; i < 6; i++) {
+                color += symbols[Math.floor(Math.random() * 16)];
+            }
+            document.body.style.background = color;
+            document.getElementById("hex").innerHTML = color;
+            document.getElementById("hex").style.color = adjustMainTextContrastColor(color);
+
+            var buttons = document.querySelectorAll(".color button");
+            buttons.forEach(function(button) {
+                button.style.color = adjustButtonContrastColor(color);
+                button.style.borderColor = adjustButtonContrastColor(color);
+            });
+        }
+
+        function saveToFavorites() {
+            var username = localStorage.getItem("loggedIn");
+            var color = document.getElementById("hex").innerHTML;
+            var favorites = JSON.parse(localStorage.getItem(username + "_favorites")) || [];
+
+            if (favorites.includes(color)) {
+                alert("Tato barva je již v oblíbených.");
+                return;
+            }
+
+            if (favorites.length >= MAX_FAVORITES) {
+                alert("Maximální počet oblíbených barev je " + MAX_FAVORITES);
+                return;
+            }
+
+            favorites.push();
+            localStorage.setItem(username + "_favorites", JSON.stringify(favorites));
+            displayFavorites();
+        }
+
+        function deleteFavorite(color) {
+            var username = localStorage.getItem("loggedIn");
+            var favorites = JSON.parse(localStorage.getItem(username + "_favorites")) || [];
+            favorites = favorites.filter(function(fav) {
+                return fav !== color;
+            });
+            localStorage.setItem(username + "_favorites", JSON.stringify(favorites));
+            displayFavorites();
+        }
+
+        function displayFavorites() {
+            var username = localStorage.getItem("loggedIn");
+            var favorites = JSON.parse(localStorage.getItem(username + "_favorites")) || [];
+            var favoritesList = document.getElementById("favoritesList");
+            favoritesList.innerHTML = "";
+            favorites.forEach(function(color) {
+                var li = document.createElement("li");
+                li.textContent = color;
+                li.style.backgroundColor = color;
+                li.style.color = adjustMainTextContrastColor(color);
+
+                var deleteButton = document.createElement("button");
+                deleteButton.textContent = "Smazat";
+                deleteButton.onclick = function() {
+                    deleteFavorite(color);
+                };
+
+                li.appendChild(deleteButton);
+                favoritesList.appendChild(li);
+            });
+        }
+
+        window.onload = checkLoginStatus;
+    </script>
+</body>
+</html>
